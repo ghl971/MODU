@@ -1677,15 +1677,56 @@ function renderSourceManager() {
   });
 }
 
+// Normalize a book source object — map common alternative field names
+function normalizeSource(item) {
+  if (!item) return item;
+  // name aliases
+  if (!item.name) item.name = item.bookSourceName || item.sourceName || item.siteName || '';
+  // baseUrl aliases
+  if (!item.baseUrl) item.baseUrl = item.bookSourceUrl || item.sourceUrl || item.siteUrl || item.host || item.url || '';
+  // searchUrl aliases
+  if (!item.searchUrl) item.searchUrl = item.searchRule || item.ruleSearchUrl || '';
+  // searchList aliases
+  if (!item.searchList) {
+    if (typeof item.ruleSearch === 'object' && item.ruleSearch) {
+      item.searchList = item.ruleSearch.bookList || item.ruleSearch.list || '';
+      if (!item.searchTitle) item.searchTitle = item.ruleSearch.name || '';
+      if (!item.searchAuthor) item.searchAuthor = item.ruleSearch.author || '';
+      if (!item.searchBookUrl) item.searchBookUrl = item.ruleSearch.bookUrl || '';
+    }
+  }
+  // content aliases
+  if (!item.contentRule && typeof item.ruleContent === 'object' && item.ruleContent) {
+    item.contentRule = item.ruleContent.content || item.ruleContent.rule || '';
+  }
+  // chapterList aliases
+  if (!item.chapterList && typeof item.ruleChapter === 'object' && item.ruleChapter) {
+    item.chapterList = item.ruleChapter.list || item.ruleChapter.chapterList || '';
+    if (!item.chapterUrlSelector) item.chapterUrlSelector = item.ruleChapter.url || '@href';
+    if (!item.chapterTitleSelector) item.chapterTitleSelector = item.ruleChapter.title || '@text';
+  }
+  return item;
+}
+
 function importBookSource(jsonStr) {
   try {
     let data = JSON.parse(jsonStr);
     // Handle array — batch import
     if (Array.isArray(data)) {
       let count = 0;
-      for (const item of data) {
-        if (!item.name || !item.baseUrl || !item.searchUrl || !item.searchList) continue;
-        if (!item.id) item.id = 'src_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + '_' + count;
+      const errors = [];
+      for (let i = 0; i < data.length; i++) {
+        const item = normalizeSource(data[i]);
+        const missing = [];
+        if (!item.name) missing.push('name');
+        if (!item.baseUrl) missing.push('baseUrl');
+        if (!item.searchUrl) missing.push('searchUrl');
+        if (!item.searchList) missing.push('searchList');
+        if (missing.length > 0) {
+          errors.push(`第${i+1}项「${item.name||'未命名'}」缺字段: ${missing.join(', ')}`);
+          continue;
+        }
+        if (!item.id) item.id = 'src_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + '_' + i;
         if (!item.chapterList) item.chapterList = 'a';
         if (!item.chapterUrlSelector) item.chapterUrlSelector = '@href';
         if (!item.chapterTitleSelector) item.chapterTitleSelector = '@text';
@@ -1700,17 +1741,26 @@ function importBookSource(jsonStr) {
         }
         count++;
       }
-      if (count === 0) throw new Error('批量导入未发现有效书源');
-      state.activeSourceId = data[0].id;
+      if (count === 0) {
+        const detail = errors.length > 0 ? '\n' + errors.join('\n') : '';
+        throw new Error('批量导入未发现有效书源\n请检查JSON字段名是否匹配(name, baseUrl, searchUrl, searchList)' + detail);
+      }
+      if (errors.length > 0) showToast(`导入完成：成功${count}个，跳过${errors.length}个`, 'info');
+      state.activeSourceId = state.bookSources[state.bookSources.length - 1].id || data[0].id;
       saveAll();
       renderSourceSelector();
       showToast(`批量导入完成：成功 ${count} 个书源`, 'success');
       return true;
     }
-    const src = data;
-    // Validate required fields
-    if (!src.name || !src.baseUrl || !src.searchUrl || !src.searchList) {
-      throw new Error('缺少必填字段：name, baseUrl, searchUrl, searchList');
+    const src = normalizeSource(data);
+    // Validate required fields — show which are missing
+    const missing = [];
+    if (!src.name) missing.push('name');
+    if (!src.baseUrl) missing.push('baseUrl');
+    if (!src.searchUrl) missing.push('searchUrl');
+    if (!src.searchList) missing.push('searchList');
+    if (missing.length > 0) {
+      throw new Error('缺少必填字段：' + missing.join(', ') + '\n书源格式：name(名称), baseUrl(网站地址), searchUrl(搜索路径), searchList(搜索结果选择器)');
     }
     // Generate ID if not provided
     if (!src.id) src.id = 'src_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);

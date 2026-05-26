@@ -1384,7 +1384,7 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================
-// FEATURE 1: ONLINE DOWNLOAD (via bqg128.cc + CORS proxy)
+// FEATURE 1: ONLINE DOWNLOAD (via CORS proxy + 笔趣阁 mirrors)
 // ============================================================
 let searchTimeout = null;
 
@@ -1412,29 +1412,20 @@ webSearchInput.addEventListener('input', () => {
 });
 
 async function performSearch(query) {
-  if (window.location.protocol === 'file:') {
-    searchResults.innerHTML = `
-      <div class="search-overlay-error">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-        <p style="margin-bottom:8px"><strong>在线下载需要 HTTP 服务环境</strong></p>
-        <p style="font-size:13px;line-height:1.6">请使用 <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;">python3 -m http.server 8080</code> 启动后访问，或部署到 GitHub Pages。</p>
-      </div>`;
-    return;
-  }
-
   searchResults.innerHTML = `<div class="search-overlay-loading"><div class="spinner"></div><p>正在搜索 "${query}"…</p></div>`;
 
-  // Multiple proxy servers to try (in order)
+  // Multiple CORS proxy services (try in order — bypass same-origin policy)
   const PROXIES = [
-    (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+    (url) => `https://proxy.killcors.com/?url=${encodeURIComponent(url)}`,
     (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
   ];
 
-  // Multiple 笔趣阁 mirrors to try
+  // Multiple 笔趣阁 mirrors to try (updated 2026)
   const MIRRORS = [
-    'https://www.bqg128.cc',
-    'https://www.xbiquge.la',
-    'https://www.biquge.com',
+    'https://www.biquge7.xyz',
+    'https://www.b5200.net',
+    'https://www.biquge.tv',
+    'https://www.bqgapp.cn',
   ];
 
   async function tryFetch(url) {
@@ -1447,7 +1438,7 @@ async function performSearch(query) {
         clearTimeout(t);
         if (!resp.ok) continue;
 
-        // allorigins.win wraps in JSON
+        // Some proxies wrap responses in JSON
         const text = resp.headers.get('content-type')?.includes('json')
           ? (await resp.json()).contents || ''
           : await resp.text();
@@ -1457,21 +1448,30 @@ async function performSearch(query) {
     return '';
   }
 
-  // Try each mirror
+  // Try each mirror with multiple search URL patterns
   let html = '';
   let usedMirror = '';
+  const searchPatterns = [
+    (m, q) => `${m}/search.html?keyword=${encodeURIComponent(q)}`,
+    (m, q) => `${m}/search?keyword=${encodeURIComponent(q)}`,
+    (m, q) => `${m}/modules/article/search.php?searchkey=${encodeURIComponent(q)}`,
+  ];
   for (const mirror of MIRRORS) {
-    const searchUrl = `${mirror}/search.html?keyword=${encodeURIComponent(query)}`;
-    html = await tryFetch(searchUrl);
-    if (html) { usedMirror = mirror; break; }
+    for (const pattern of searchPatterns) {
+      html = await tryFetch(pattern(mirror, query));
+      if (html) { usedMirror = mirror; break; }
+    }
+    if (html) break;
   }
 
   if (!html) {
+    const isFile = window.location.protocol === 'file:';
     searchResults.innerHTML = `
       <div class="search-overlay-error">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-        <p>无法访问笔趣阁站点</p>
-        <p style="font-size:13px;margin-top:8px">所有代理服务器均连接失败。可能是网络环境受限，请尝试导入 TXT/EPUB 文件。</p>
+        <p style="margin-bottom:8px"><strong>无法访问笔趣阁站点</strong></p>
+        ${isFile ? '<p style="font-size:13px;margin-top:8px">当前为本地文件模式（file://），部分浏览器不支持从本地文件发起网络请求。请使用 <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;">python3 -m http.server 8080</code> 启动 HTTP 服务后再试。</p>' : ''}
+        <p style="font-size:13px;margin-top:8px">所有代理连接均失败，可能是网络受限或笔趣阁站点访问异常。请尝试导入 TXT/EPUB 文件。</p>
       </div>`;
     return;
   }
@@ -1554,7 +1554,7 @@ async function performSearch(query) {
       const bookId = btn.dataset.id;
       const title = btn.dataset.title;
       const author = btn.dataset.author;
-      const mirror = window.__moduMirror || 'https://www.bqg128.cc';
+      const mirror = window.__moduMirror || 'https://www.biquge7.xyz';
 
       if (state.books.some(b => b.title === title && b.author === author)) {
         showToast('「' + title + '」已在书架中', 'info'); return;
@@ -1602,7 +1602,7 @@ async function performSearch(query) {
 // ----- Crawl chapters from 笔趣阁 -----
 async function crawlBqgChapters(bookId, mirror) {
   const PROXIES = [
-    (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+    (url) => `https://proxy.killcors.com/?url=${encodeURIComponent(url)}`,
     (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
   ];
 

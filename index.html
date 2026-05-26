@@ -539,9 +539,10 @@ window.__jszipLoaded = false;
     position: absolute; top: calc(100% + 6px); right: 0; z-index: 50;
     background: var(--bg-card); border: 1px solid var(--border);
     border-radius: var(--radius-md); box-shadow: 0 12px 40px var(--shadow-strong);
-    display: none; min-width: 200px; overflow: hidden;
+    display: none; min-width: 220px; max-height: 340px; overflow-y: auto;
   }
   .search-source-panel.visible { display: block; animation: fadeUp 0.2s ease; }
+  .search-source-list { overflow-y: auto; }
   .search-source-item {
     padding: 10px 14px; cursor: pointer; font-size: 13px; color: var(--text-secondary);
     display: flex; align-items: center; gap: 8px; transition: all 0.15s;
@@ -1929,6 +1930,8 @@ webSearchInput.addEventListener('input', () => {
 const CORS_PROXIES = [
   (url) => `https://proxy.killcors.com/?url=${encodeURIComponent(url)}`,
   (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+  (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+  (url) => `https://cors-anywhere.herokuapp.com/${url}`,
 ];
 
 async function tryFetch(url, timeoutMs = 8000) {

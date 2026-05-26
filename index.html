@@ -526,6 +526,59 @@ window.__jszipLoaded = false;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ========== SOURCE SELECTOR ========== */
+  .search-source-selector { position: relative; flex-shrink: 0; }
+  .search-source-btn {
+    display: flex; align-items: center; gap: 4px; padding: 6px 10px;
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text-secondary); cursor: pointer;
+    font-family: var(--font-ui); font-size: 13px; transition: all 0.2s; white-space: nowrap;
+  }
+  .search-source-btn:hover { border-color: var(--accent); color: var(--text-primary); background: var(--accent-soft); }
+  .search-source-panel {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 50;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-md); box-shadow: 0 12px 40px var(--shadow-strong);
+    display: none; min-width: 200px; overflow: hidden;
+  }
+  .search-source-panel.visible { display: block; animation: fadeUp 0.2s ease; }
+  .search-source-item {
+    padding: 10px 14px; cursor: pointer; font-size: 13px; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 8px; transition: all 0.15s;
+    border-left: 3px solid transparent;
+  }
+  .search-source-item:hover { background: var(--bg-secondary); color: var(--text-primary); }
+  .search-source-item.active { background: var(--accent-soft); color: var(--accent-deep); border-left-color: var(--accent); font-weight: 500; }
+  .search-source-item .src-check { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+  .search-source-item.active .src-check { border-color: var(--accent); background: var(--accent); }
+  .search-source-item.active .src-check::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: white; }
+  .search-source-actions { border-top: 1px solid var(--border); }
+  .search-source-action {
+    width: 100%; padding: 10px 14px; background: none; border: none;
+    color: var(--text-secondary); cursor: pointer; font-family: var(--font-ui);
+    font-size: 13px; display: flex; align-items: center; gap: 8px; transition: all 0.15s;
+  }
+  .search-source-action:hover { background: var(--bg-secondary); color: var(--accent); }
+  .search-source-action + .search-source-action { border-top: 1px solid var(--border-light); }
+  .search-source-action svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  /* Source management list */
+  .source-mgmt-item {
+    display: flex; align-items: center; gap: 12px; padding: 12px 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .source-mgmt-info { flex: 1; min-width: 0; }
+  .source-mgmt-name { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+  .source-mgmt-url { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .source-mgmt-badge { font-size: 11px; padding: 1px 8px; border-radius: 8px; background: var(--bg-tertiary); color: var(--text-muted); }
+  .source-mgmt-del {
+    width: 28px; height: 28px; border-radius: 50%; border: none;
+    background: transparent; color: var(--text-muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 14px;
+  }
+  .source-mgmt-del:hover { background: #FEE2E2; color: #EF4444; }
+  .source-mgmt-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+
   /* ========== RESPONSIVE ========== */
   @media (max-width: 1024px) {
     .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 100; transform: translateX(-100%); box-shadow: 4px 0 40px var(--shadow-strong); }
@@ -740,6 +793,25 @@ window.__jszipLoaded = false;
   <div class="search-overlay-panel">
     <div class="search-overlay-header">
       <input class="search-overlay-input" id="webSearchInput" type="text" placeholder="输入小说名称，在线查找并下载..." autocomplete="off" aria-label="搜索在线图书">
+      <div class="search-source-selector" id="searchSourceSelector">
+        <button class="search-source-btn" id="searchSourceBtn" title="切换书源">
+          <span id="searchSourceLabel">书源</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="search-source-panel" id="searchSourcePanel">
+          <div class="search-source-list" id="searchSourceList"></div>
+          <div class="search-source-actions">
+            <button class="search-source-action" id="importSourceBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              导入书源
+            </button>
+            <button class="search-source-action" id="manageSourcesBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              管理书源
+            </button>
+          </div>
+        </div>
+      </div>
       <button class="search-overlay-close" id="searchOverlayClose" aria-label="关闭搜索">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -750,6 +822,46 @@ window.__jszipLoaded = false;
         <p>输入书名搜索，可下载的图书会自动获取全文并加入书架</p>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Import Source Overlay -->
+<div class="search-overlay" id="importSourceOverlay">
+  <div class="search-overlay-panel" style="max-width:560px">
+    <div class="search-overlay-header">
+      <span style="font-weight:600;font-size:16px;color:var(--text-primary);flex:1">导入书源</span>
+      <button class="search-overlay-close" id="importSourceClose" aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="search-overlay-body" style="padding:20px 24px">
+      <textarea id="sourceJsonInput" placeholder='在此粘贴书源 JSON，格式如：\n{\n  "name": "我的书源",\n  "baseUrl": "https://...",\n  ...\n}' style="width:100%;height:200px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-ui);font-size:13px;resize:vertical;outline:none;transition:border var(--transition)"></textarea>
+      <div id="sourceImportError" style="color:#EF4444;font-size:13px;margin-top:8px;display:none"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="search-result-btn primary" id="sourceImportBtn" style="padding:8px 24px">导入</button>
+        <button class="search-result-btn" id="sourceImportCancel">取消</button>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:var(--bg-secondary);border-radius:var(--radius-sm);font-size:12px;color:var(--text-muted);line-height:1.6">
+        <strong style="color:var(--text-secondary)">书源格式说明：</strong><br>
+        name: 书源名称 · baseUrl: 网站根地址 · searchUrl: 搜索路径 (用 {{key}} 表示关键词)<br>
+        searchList: 搜索结果列表 CSS 选择器 · searchTitle: 书名选择器 · searchAuthor: 作者选择器 · searchBookUrl: 书籍链接选择器 (用 @attr 取属性)<br>
+        chapterUrl: 章节列表页路径 (用 {{bookId}} 代替书籍ID) · chapterList: 章节链接选择器<br>
+        contentRule: 正文内容选择器 · contentRemove: 需要移除的元素选择器
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Manage Sources Overlay -->
+<div class="search-overlay" id="manageSourcesOverlay">
+  <div class="search-overlay-panel" style="max-width:560px">
+    <div class="search-overlay-header">
+      <span style="font-weight:600;font-size:16px;color:var(--text-primary);flex:1">管理书源</span>
+      <button class="search-overlay-close" id="manageSourcesClose" aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="search-overlay-body" id="manageSourcesBody" style="padding:16px 24px;min-height:200px"></div>
   </div>
 </div>
 
@@ -803,6 +915,72 @@ const SAMPLE_BOOKS = [
 ];
 
 // ============================================================
+// DEFAULT BOOK SOURCES
+// ============================================================
+const DEFAULT_SOURCES = [
+  {
+    id: 'biquge7', name: '笔趣阁7',
+    baseUrl: 'https://www.biquge7.xyz',
+    searchUrl: '/search.html?keyword={{key}}',
+    searchList: 'li:has(a[href*="/book/"])',
+    searchTitle: 'a[href*="/book/"]',
+    searchAuthor: '.s4, .author, .gray',
+    searchBookUrl: 'a[href*="/book/"]@href',
+    chapterUrl: '/book/{{bookId}}/',
+    chapterList: '#list a, .chapter-list a, .listmain a, .mulu a, #chapters a',
+    chapterUrlSelector: '@href',
+    chapterTitleSelector: '@text',
+    contentRule: '#content, .content, .chapter-content, #booktxt, .showtxt, #txt, .text, article',
+    contentRemove: 'script, style, nav, .ad, ins, .adsbygoogle',
+  },
+  {
+    id: 'b5200', name: 'B5200',
+    baseUrl: 'https://www.b5200.net',
+    searchUrl: '/search.html?keyword={{key}}',
+    searchList: 'li:has(a[href*="/book/"])',
+    searchTitle: 'a[href*="/book/"]',
+    searchAuthor: '.s4, .author, .gray',
+    searchBookUrl: 'a[href*="/book/"]@href',
+    chapterUrl: '/book/{{bookId}}/',
+    chapterList: '#list a, .chapter-list a, .listmain a, .mulu a, #chapters a',
+    chapterUrlSelector: '@href',
+    chapterTitleSelector: '@text',
+    contentRule: '#content, .content, .chapter-content, #booktxt, .showtxt, #txt, .text, article',
+    contentRemove: 'script, style, nav, .ad, ins',
+  },
+  {
+    id: 'biquge-tv', name: 'Biquge TV',
+    baseUrl: 'https://www.biquge.tv',
+    searchUrl: '/search.html?keyword={{key}}',
+    searchList: 'li:has(a[href*="/book/"])',
+    searchTitle: 'a[href*="/book/"]',
+    searchAuthor: '.s4, .author, .gray',
+    searchBookUrl: 'a[href*="/book/"]@href',
+    chapterUrl: '/book/{{bookId}}/',
+    chapterList: '#list a, .chapter-list a, .listmain a, .mulu a, #chapters a',
+    chapterUrlSelector: '@href',
+    chapterTitleSelector: '@text',
+    contentRule: '#content, .content, .chapter-content, #booktxt, .showtxt, #txt, .text, article',
+    contentRemove: 'script, style, nav, .ad, ins',
+  },
+  {
+    id: 'bqgapp', name: '笔趣阁APP',
+    baseUrl: 'https://www.bqgapp.cn',
+    searchUrl: '/search.html?keyword={{key}}',
+    searchList: 'li:has(a[href*="/book/"])',
+    searchTitle: 'a[href*="/book/"]',
+    searchAuthor: '.s4, .author, .gray',
+    searchBookUrl: 'a[href*="/book/"]@href',
+    chapterUrl: '/book/{{bookId}}/',
+    chapterList: '#list a, .chapter-list a, .listmain a, .mulu a, #chapters a',
+    chapterUrlSelector: '@href',
+    chapterTitleSelector: '@text',
+    contentRule: '#content, .content, .chapter-content, #booktxt, .showtxt, #txt, .text, article',
+    contentRemove: 'script, style, nav, .ad, ins',
+  }
+];
+
+// ============================================================
 // STATE
 // ============================================================
 const state = {
@@ -815,7 +993,9 @@ const state = {
   theme: 'warm',
   books: [...SAMPLE_BOOKS],
   progress: {},
-  importedBookIds: new Set()
+  importedBookIds: new Set(),
+  bookSources: DEFAULT_SOURCES.map(s => ({ ...s })),
+  activeSourceId: 'biquge7'
 };
 
 // ============================================================
@@ -883,6 +1063,23 @@ const chapterListPanel = $('#chapterListPanel');
 const chapterListHeader = $('#chapterListHeader');
 const chapterListBody = $('#chapterListBody');
 
+// Source selector & management DOM refs
+const searchSourceBtn = $('#searchSourceBtn');
+const searchSourceLabel = $('#searchSourceLabel');
+const searchSourcePanel = $('#searchSourcePanel');
+const searchSourceList = $('#searchSourceList');
+const importSourceBtn = $('#importSourceBtn');
+const manageSourcesBtn = $('#manageSourcesBtn');
+const importSourceOverlay = $('#importSourceOverlay');
+const sourceJsonInput = $('#sourceJsonInput');
+const sourceImportBtn = $('#sourceImportBtn');
+const sourceImportCancel = $('#sourceImportCancel');
+const sourceImportError = $('#sourceImportError');
+const importSourceClose = $('#importSourceClose');
+const manageSourcesOverlay = $('#manageSourcesOverlay');
+const manageSourcesBody = $('#manageSourcesBody');
+const manageSourcesClose = $('#manageSourcesClose');
+
 // ============================================================
 // TOAST
 // ============================================================
@@ -909,7 +1106,9 @@ const STORAGE_KEYS = {
   fontSize: 'modu_fontsize',
   lineHeight: 'modu_lineheight',
   paraGap: 'modu_paragap',
-  fontFamily: 'modu_fontfamily'
+  fontFamily: 'modu_fontfamily',
+  sources: 'modu_sources',
+  activeSource: 'modu_active_source'
 };
 
 // ============================================================
@@ -964,6 +1163,8 @@ function saveAll() {
   try {
     localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(state.progress));
     localStorage.setItem(STORAGE_KEYS.imported, JSON.stringify([...state.importedBookIds]));
+    localStorage.setItem(STORAGE_KEYS.sources, JSON.stringify(state.bookSources));
+    localStorage.setItem(STORAGE_KEYS.activeSource, state.activeSourceId);
     // Full book data → IndexedDB (handles large EPUB content)
     const importedBooks = state.books.filter(b => state.importedBookIds.has(b.id));
     if (importedBooks.length) {
@@ -978,6 +1179,15 @@ async function loadSavedData() {
     if (p) state.progress = JSON.parse(p);
     const imp = localStorage.getItem(STORAGE_KEYS.imported);
     if (imp) state.importedBookIds = new Set(JSON.parse(imp));
+
+    // Load book sources
+    const savedSources = localStorage.getItem(STORAGE_KEYS.sources);
+    if (savedSources) {
+      const parsed = JSON.parse(savedSources);
+      if (parsed.length > 0) state.bookSources = parsed;
+    }
+    const activeSrc = localStorage.getItem(STORAGE_KEYS.activeSource);
+    if (activeSrc) state.activeSourceId = activeSrc;
 
     // Load full book data from IndexedDB
     const saved = await dbLoadBooks().catch(() => []);
@@ -1381,10 +1591,179 @@ document.addEventListener('click', (e) => {
   if (!themeToggle.contains(e.target) && !themePanel.contains(e.target)) themePanel.classList.remove('visible');
   if (!settingsToggle.contains(e.target) && !settingsPanel.contains(e.target)) settingsPanel.classList.remove('visible');
   if (!chaptersToggle.contains(e.target) && !chapterListPanel.contains(e.target)) chapterListPanel.classList.remove('visible');
+  if (!searchSourceBtn.contains(e.target) && !searchSourcePanel.contains(e.target)) searchSourcePanel.classList.remove('visible');
 });
 
 // ============================================================
-// FEATURE 1: ONLINE DOWNLOAD (via CORS proxy + 笔趣阁 mirrors)
+// BOOK SOURCE MANAGEMENT
+// ============================================================
+function renderSourceSelector() {
+  const enabled = state.bookSources.filter(s => s.enabled !== false);
+  const active = state.bookSources.find(s => s.id === state.activeSourceId);
+  searchSourceLabel.textContent = active ? active.name : '书源';
+
+  searchSourceList.innerHTML = enabled.map(src => `
+    <div class="search-source-item ${src.id === state.activeSourceId ? 'active' : ''}" data-src-id="${src.id}">
+      <span class="src-check"></span>
+      <span>${src.name}</span>
+    </div>
+  `).join('');
+
+  searchSourceList.querySelectorAll('.search-source-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.srcId;
+      state.activeSourceId = id;
+      saveAll();
+      renderSourceSelector();
+      searchSourcePanel.classList.remove('visible');
+    });
+  });
+}
+
+function openImportSource() {
+  importSourceOverlay.classList.add('visible');
+  sourceJsonInput.value = '';
+  sourceImportError.style.display = 'none';
+  sourceJsonInput.focus();
+}
+
+function openSourceManager() {
+  renderSourceManager();
+  manageSourcesOverlay.classList.add('visible');
+}
+
+function renderSourceManager() {
+  if (!manageSourcesBody) return;
+  const defaults = new Set(DEFAULT_SOURCES.map(s => s.id));
+  manageSourcesBody.innerHTML = state.bookSources.length === 0
+    ? '<div class="source-mgmt-empty">没有书源，请导入或恢复默认</div>'
+    : state.bookSources.map(src => `
+      <div class="source-mgmt-item">
+        <div class="source-mgmt-info">
+          <div class="source-mgmt-name">${src.name}</div>
+          <div class="source-mgmt-url">${src.baseUrl}</div>
+        </div>
+        ${defaults.has(src.id) ? '<span class="source-mgmt-badge">默认</span>' : ''}
+        ${!defaults.has(src.id) ? `<button class="source-mgmt-del" data-del-id="${src.id}" title="删除书源">✕</button>` : ''}
+      </div>
+    `).join('');
+
+  manageSourcesBody.querySelectorAll('.source-mgmt-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.delId;
+      deleteBookSource(id);
+      renderSourceManager();
+      renderSourceSelector();
+    });
+  });
+}
+
+function importBookSource(jsonStr) {
+  try {
+    const src = JSON.parse(jsonStr);
+    // Validate required fields
+    if (!src.name || !src.baseUrl || !src.searchUrl || !src.searchList) {
+      throw new Error('缺少必填字段：name, baseUrl, searchUrl, searchList');
+    }
+    // Generate ID if not provided
+    if (!src.id) src.id = 'src_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    // Set defaults for optional fields
+    if (!src.chapterUrl) src.chapterUrl = '';
+    if (!src.chapterList) src.chapterList = 'a';
+    if (!src.chapterUrlSelector) src.chapterUrlSelector = '@href';
+    if (!src.chapterTitleSelector) src.chapterTitleSelector = '@text';
+    if (!src.contentRule) src.contentRule = 'body';
+    if (!src.contentRemove) src.contentRemove = 'script, style, nav';
+    // Check for duplicate by name
+    const exists = state.bookSources.some(s => s.name === src.name || s.id === src.id);
+    if (exists) {
+      // Replace existing
+      const idx = state.bookSources.findIndex(s => s.id === src.id || s.name === src.name);
+      state.bookSources[idx] = src;
+    } else {
+      state.bookSources.push(src);
+    }
+    state.activeSourceId = src.id;
+    saveAll();
+    renderSourceSelector();
+    showToast(`书源「${src.name}」导入成功`, 'success');
+    return true;
+  } catch (e) {
+    throw new Error('JSON 解析失败：' + e.message);
+  }
+}
+
+function deleteBookSource(id) {
+  const defaults = new Set(DEFAULT_SOURCES.map(s => s.id));
+  if (defaults.has(id)) { showToast('默认书源无法删除', 'error'); return; }
+  state.bookSources = state.bookSources.filter(s => s.id !== id);
+  if (state.activeSourceId === id) {
+    state.activeSourceId = state.bookSources.length > 0 ? state.bookSources[0].id : '';
+  }
+  saveAll();
+  renderSourceSelector();
+  showToast('书源已删除', 'info');
+}
+
+// ---- Source selector toggle ----
+searchSourceBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  renderSourceSelector();
+  searchSourcePanel.classList.toggle('visible');
+});
+
+// ---- Import source ----
+importSourceBtn.addEventListener('click', () => {
+  searchSourcePanel.classList.remove('visible');
+  openImportSource();
+});
+sourceImportBtn.addEventListener('click', () => {
+  const val = sourceJsonInput.value.trim();
+  if (!val) { sourceImportError.textContent = '请粘贴书源 JSON'; sourceImportError.style.display = 'block'; return; }
+  try {
+    importBookSource(val);
+    importSourceOverlay.classList.remove('visible');
+  } catch (e) {
+    sourceImportError.textContent = e.message;
+    sourceImportError.style.display = 'block';
+  }
+});
+sourceImportCancel.addEventListener('click', () => importSourceOverlay.classList.remove('visible'));
+importSourceClose.addEventListener('click', () => importSourceOverlay.classList.remove('visible'));
+importSourceOverlay.addEventListener('click', (e) => { if (e.target === importSourceOverlay) importSourceOverlay.classList.remove('visible'); });
+
+// ---- Manage sources ----
+manageSourcesBtn.addEventListener('click', () => {
+  searchSourcePanel.classList.remove('visible');
+  openSourceManager();
+});
+manageSourcesClose.addEventListener('click', () => manageSourcesOverlay.classList.remove('visible'));
+manageSourcesOverlay.addEventListener('click', (e) => { if (e.target === manageSourcesOverlay) manageSourcesOverlay.classList.remove('visible'); });
+
+// ============================================================
+// SELECTOR HELPER — parse "selector@attr" format
+// ============================================================
+function selectResult(el, rule) {
+  if (!el || !rule) return '';
+  const parts = rule.split('@');
+  const selector = parts[0].trim();
+  const attr = parts.length > 1 ? parts[1].trim() : '';
+  let target = el;
+  if (selector) target = el.querySelector(selector);
+  if (!target) return '';
+  if (attr === 'text' || !attr) return (target.textContent || '').trim();
+  return (target.getAttribute(attr) || '').trim();
+}
+
+function resolveUrl(path, base) {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  const baseClean = base.replace(/\/+$/, '');
+  return path.startsWith('/') ? baseClean + path : baseClean + '/' + path;
+}
+
+// ============================================================
+// FEATURE 1: ONLINE DOWNLOAD (via book source rules)
 // ============================================================
 let searchTimeout = null;
 
@@ -1411,56 +1790,54 @@ webSearchInput.addEventListener('input', () => {
   searchTimeout = setTimeout(() => performSearch(q), 400);
 });
 
+// ---- CORS proxy infrastructure ----
+const CORS_PROXIES = [
+  (url) => `https://proxy.killcors.com/?url=${encodeURIComponent(url)}`,
+  (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+];
+
+async function tryFetch(url, timeoutMs = 8000) {
+  for (const proxyFn of CORS_PROXIES) {
+    try {
+      const proxyUrl = proxyFn(url);
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), timeoutMs);
+      const resp = await fetch(proxyUrl, { signal: ctrl.signal });
+      clearTimeout(t);
+      if (!resp.ok) continue;
+      const text = resp.headers.get('content-type')?.includes('json')
+        ? (await resp.json()).contents || ''
+        : await resp.text();
+      if (text && text.length > 100) return text;
+    } catch (e) { /* try next proxy */ }
+  }
+  return '';
+}
+
+// ---- Search using active source ----
 async function performSearch(query) {
-  searchResults.innerHTML = `<div class="search-overlay-loading"><div class="spinner"></div><p>正在搜索 "${query}"…</p></div>`;
-
-  // Multiple CORS proxy services (try in order — bypass same-origin policy)
-  const PROXIES = [
-    (url) => `https://proxy.killcors.com/?url=${encodeURIComponent(url)}`,
-    (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
-  ];
-
-  // Multiple 笔趣阁 mirrors to try (updated 2026)
-  const MIRRORS = [
-    'https://www.biquge7.xyz',
-    'https://www.b5200.net',
-    'https://www.biquge.tv',
-    'https://www.bqgapp.cn',
-  ];
-
-  async function tryFetch(url) {
-    for (const proxyFn of PROXIES) {
-      try {
-        const proxyUrl = proxyFn(url);
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 8000);
-        const resp = await fetch(proxyUrl, { signal: ctrl.signal });
-        clearTimeout(t);
-        if (!resp.ok) continue;
-
-        // Some proxies wrap responses in JSON
-        const text = resp.headers.get('content-type')?.includes('json')
-          ? (await resp.json()).contents || ''
-          : await resp.text();
-        if (text && text.length > 100) return text;
-      } catch (e) { /* try next proxy */ }
-    }
-    return '';
+  const source = state.bookSources.find(s => s.id === state.activeSourceId);
+  if (!source) {
+    searchResults.innerHTML = `<div class="search-overlay-error"><p>请先选择或导入一个书源</p></div>`;
+    return;
   }
 
-  // Try each mirror with multiple search URL patterns
+  searchResults.innerHTML = `<div class="search-overlay-loading"><div class="spinner"></div><p>正在通过「${source.name}」搜索 "${query}"…</p></div>`;
+
+  // Build search URL
+  const searchUrl = source.searchUrl.replace('{{key}}', encodeURIComponent(query));
+  const fullSearchUrl = resolveUrl(searchUrl, source.baseUrl);
+
+  // Try multiple URL patterns if {{key}} replacement
   let html = '';
-  let usedMirror = '';
-  const searchPatterns = [
-    (m, q) => `${m}/search.html?keyword=${encodeURIComponent(q)}`,
-    (m, q) => `${m}/search?keyword=${encodeURIComponent(q)}`,
-    (m, q) => `${m}/modules/article/search.php?searchkey=${encodeURIComponent(q)}`,
-  ];
-  for (const mirror of MIRRORS) {
-    for (const pattern of searchPatterns) {
-      html = await tryFetch(pattern(mirror, query));
-      if (html) { usedMirror = mirror; break; }
-    }
+  const searchAttempts = [fullSearchUrl];
+  // Also try alternative patterns
+  if (!searchUrl.includes('?')) {
+    searchAttempts.push(resolveUrl(`/search?keyword=${encodeURIComponent(query)}`, source.baseUrl));
+  }
+
+  for (const url of searchAttempts) {
+    html = await tryFetch(url, 8000);
     if (html) break;
   }
 
@@ -1469,51 +1846,53 @@ async function performSearch(query) {
     searchResults.innerHTML = `
       <div class="search-overlay-error">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-        <p style="margin-bottom:8px"><strong>无法访问笔趣阁站点</strong></p>
+        <p style="margin-bottom:8px"><strong>无法访问「${source.name}」</strong></p>
         ${isFile ? '<p style="font-size:13px;margin-top:8px">当前为本地文件模式（file://），部分浏览器不支持从本地文件发起网络请求。请使用 <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;">python3 -m http.server 8080</code> 启动 HTTP 服务后再试。</p>' : ''}
-        <p style="font-size:13px;margin-top:8px">所有代理连接均失败，可能是网络受限或笔趣阁站点访问异常。请尝试导入 TXT/EPUB 文件。</p>
+        <p style="font-size:13px;margin-top:8px">代理连接失败或站点访问异常。请尝试切换其他书源或导入 TXT/EPUB 文件。</p>
       </div>`;
     return;
   }
 
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-
-  // Extract search results
+  // Parse HTML and extract search results using source rules
+  const doc = new DOMParser().parseFromString(html, 'text/html');
   let items = [];
 
-  // Method 1: look for list items with book links
-  const listItems = doc.querySelectorAll('li:has(a[href*="/book/"]), .result-list li, .search-list li, .searchResult li, .so-list li');
-  listItems.forEach(li => {
-    const link = li.querySelector('a[href*="/book/"]');
-    if (!link) return;
-    const title = (link.textContent || '').trim();
-    const href = link.getAttribute('href') || '';
-    const bookId = href.match(/\/(\d+)\/?/)?.[1] || '';
-    if (!title || !bookId) return;
-    const authorEl = li.querySelector('.s4, .author, .gray, p:last-of-type');
-    const author = authorEl ? (authorEl.textContent || '').trim().replace(/^作者[：:]?/, '') : '未知';
-    items.push({ title, bookId, author, href });
-  });
-
-  // Method 2: all links containing /book/
-  if (items.length < 2) {
-    const seen = new Set();
-    doc.querySelectorAll('a[href*="/book/"]').forEach(a => {
-      const href = a.getAttribute('href') || '';
-      const id = href.match(/\/(\d+)\/?$/)?.[1];
-      if (!id || seen.has(id)) return;
-      seen.add(id);
-      const title = (a.textContent || '').trim();
+  // Use source.searchList to find result items
+  const resultEls = doc.querySelectorAll(source.searchList);
+  if (resultEls.length > 0) {
+    resultEls.forEach(el => {
+      const title = selectResult(el, source.searchTitle);
       if (!title || title.length > 40) return;
-      items.push({ title, bookId: id, author: '未知', href });
+      const author = source.searchAuthor ? selectResult(el, source.searchAuthor) : '未知';
+      let bookUrl = source.searchBookUrl ? selectResult(el, source.searchBookUrl) : '';
+      if (!bookUrl) return;
+      // Try to extract book ID from URL
+      const idMatch = bookUrl.match(/(\d+)/);
+      const bookId = idMatch ? idMatch[1] : 'id_' + Date.now();
+      items.push({ title, author, bookUrl, bookId });
+    });
+  }
+
+  // Fallback: if no results from list, try all links
+  if (items.length === 0) {
+    const seen = new Set();
+    const linkSelector = source.searchTitle.includes('@')
+      ? source.searchTitle.split('@')[0]
+      : source.searchTitle;
+    doc.querySelectorAll(linkSelector).forEach(a => {
+      const title = (a.textContent || '').trim();
+      if (!title || title.length > 40 || seen.has(title)) return;
+      seen.add(title);
+      const href = a.getAttribute('href') || '';
+      const idMatch = href.match(/(\d+)/);
+      const bookId = idMatch ? idMatch[1] : 'id_' + Date.now();
+      items.push({ title, author: '未知', bookUrl: href, bookId });
     });
   }
 
   if (items.length === 0) {
     searchResults.innerHTML = `
       <div class="search-overlay-error">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
         <p>未找到与「${query}」相关的图书</p>
       </div>`;
     return;
@@ -1523,8 +1902,7 @@ async function performSearch(query) {
   const seen = new Set();
   items = items.filter(i => { const k = i.title + i.bookId; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 15);
 
-  // Store mirror for download
-  window.__moduMirror = usedMirror;
+  const srcName = source.name;
 
   searchResults.innerHTML = items.map(item => {
     const isAdded = state.books.some(b => b.title === item.title);
@@ -1534,10 +1912,10 @@ async function performSearch(query) {
         <div class="search-result-info">
           <div class="search-result-title">${item.title.length > 30 ? item.title.slice(0, 30) + '…' : item.title}</div>
           <div class="search-result-author">${item.author}</div>
-          <div style="margin-top:4px"><span class="dl-status available">笔趣阁 · 可下载</span></div>
+          <div style="margin-top:4px"><span class="dl-status available">${srcName} · 可下载</span></div>
           <div class="search-result-actions" style="margin-top:8px">
             <button class="search-result-btn ${isAdded ? 'added' : 'primary'}" data-action="download"
-              data-id="${item.bookId}" data-title='${item.title.replace(/'/g, "&#39;")}' data-author='${item.author.replace(/'/g, "&#39;")}'>
+              data-bookurl='${item.bookUrl.replace(/'/g, "&#39;")}' data-title='${item.title.replace(/'/g, "&#39;")}' data-author='${item.author.replace(/'/g, "&#39;")}'>
               ${isAdded
                 ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 已添加'
                 : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> 下载'}
@@ -1551,10 +1929,9 @@ async function performSearch(query) {
   // Bind download
   searchResults.querySelectorAll('[data-action="download"]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const bookId = btn.dataset.id;
+      const bookUrl = btn.dataset.bookurl;
       const title = btn.dataset.title;
       const author = btn.dataset.author;
-      const mirror = window.__moduMirror || 'https://www.biquge7.xyz';
 
       if (state.books.some(b => b.title === title && b.author === author)) {
         showToast('「' + title + '」已在书架中', 'info'); return;
@@ -1564,15 +1941,19 @@ async function performSearch(query) {
       btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;margin:0"></div> 下载中…';
       showToast('开始下载「' + title + '」…', 'info');
 
+      // Re-read source (may have changed since search)
+      const dlSource = state.bookSources.find(s => s.id === state.activeSourceId);
+
       try {
-        const chapters = await crawlBqgChapters(bookId, mirror);
+        if (!dlSource) throw new Error('书源已被删除');
+        const chapters = await crawlWithSource(bookUrl, dlSource);
         if (chapters.length === 0) throw new Error('未获取到章节内容');
 
         const book = {
           id: 'dl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
           title, author, coverUrl: '',
           coverColor: 'linear-gradient(135deg, #1E3A5F, #3B82F6, #60A5FA)',
-          description: `从笔趣阁下载，共 ${chapters.length} 个章节`,
+          description: `从 ${dlSource.name} 下载，共 ${chapters.length} 个章节`,
           chapters
         };
 
@@ -1599,63 +1980,24 @@ async function performSearch(query) {
   });
 }
 
-// ----- Crawl chapters from 笔趣阁 -----
-async function crawlBqgChapters(bookId, mirror) {
-  const PROXIES = [
-    (url) => `https://proxy.killcors.com/?url=${encodeURIComponent(url)}`,
-    (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
-  ];
-
-  async function tryFetch(url) {
-    for (const proxyFn of PROXIES) {
-      try {
-        const proxyUrl = proxyFn(url);
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 10000);
-        const resp = await fetch(proxyUrl, { signal: ctrl.signal });
-        clearTimeout(t);
-        if (!resp.ok) continue;
-        const text = resp.headers.get('content-type')?.includes('json')
-          ? (await resp.json()).contents || ''
-          : await resp.text();
-        if (text && text.length > 100) return text;
-      } catch (e) { /* try next */ }
-    }
-    return '';
-  }
-
-  // Fetch book page
-  const bookUrl = `${mirror}/book/${bookId}/`;
-  const html = await tryFetch(bookUrl);
-  if (!html) throw new Error('无法访问书籍页面，所有代理均失败');
+// ---- Crawl chapters using source rules ----
+async function crawlWithSource(bookUrl, source) {
+  const fullBookUrl = resolveUrl(bookUrl, source.baseUrl);
+  const html = await tryFetch(fullBookUrl, 10000);
+  if (!html) throw new Error('无法访问书籍页面');
 
   const doc = new DOMParser().parseFromString(html, 'text/html');
 
-  // Find chapter links — try multiple selectors
+  // Find chapter links using source.chapterList
   let chapterLinks = [];
-
-  // Common chapter list containers
-  const containers = doc.querySelectorAll('#list, .chapter-list, .listmain, .mulu, #chapters, .chapter');
-  containers.forEach(container => {
-    container.querySelectorAll('a').forEach(a => {
-      const href = a.getAttribute('href') || '';
-      if (href.includes('.html') && !href.includes('javascript')) {
-        const title = (a.textContent || '').trim();
-        if (title) chapterLinks.push({ href, title });
-      }
-    });
+  const linkEls = doc.querySelectorAll(source.chapterList);
+  linkEls.forEach(a => {
+    const href = a.getAttribute('href') || '';
+    if (!href || href === '#' || href.includes('javascript')) return;
+    const title = (a.textContent || '').trim();
+    if (!title) return;
+    chapterLinks.push({ href, title });
   });
-
-  // Fallback: look for any link with .html containing the bookId
-  if (chapterLinks.length < 2) {
-    doc.querySelectorAll(`a[href*="${bookId}"]`).forEach(a => {
-      const href = a.getAttribute('href') || '';
-      if (href.includes('.html') && !href.includes('javascript')) {
-        const title = (a.textContent || '').trim();
-        if (title) chapterLinks.push({ href, title });
-      }
-    });
-  }
 
   // Deduplicate
   const seen = new Set();
@@ -1663,7 +2005,7 @@ async function crawlBqgChapters(bookId, mirror) {
     if (seen.has(c.href)) return false;
     seen.add(c.href);
     return true;
-  }).slice(0, 200);
+  }).slice(0, 500);
 
   if (chapterLinks.length === 0) throw new Error('无法解析章节列表');
 
@@ -1671,15 +2013,22 @@ async function crawlBqgChapters(bookId, mirror) {
   const chapters = [];
   for (let i = 0; i < chapterLinks.length; i++) {
     const { href, title } = chapterLinks[i];
-    const chUrl = href.startsWith('http') ? href : `${mirror}${href.startsWith('/') ? '' : '/'}${href}`;
+    const chUrl = resolveUrl(href, source.baseUrl);
     const chTitle = title || `第 ${i + 1} 章`;
 
     try {
-      const chHtml = await tryFetch(chUrl);
+      const chHtml = await tryFetch(chUrl, 10000);
       if (!chHtml) continue;
 
       const chDoc = new DOMParser().parseFromString(chHtml, 'text/html');
-      const contentEl = chDoc.querySelector('#content, .content, .chapter-content, #booktxt, .showtxt, #txt, .text, article');
+
+      // Remove unwanted elements
+      if (source.contentRemove) {
+        chDoc.querySelectorAll(source.contentRemove).forEach(el => el.remove());
+      }
+
+      // Extract content
+      const contentEl = source.contentRule ? chDoc.querySelector(source.contentRule) : chDoc.body;
       let text = '';
       if (contentEl) {
         text = contentEl.textContent || '';
@@ -2037,6 +2386,7 @@ async function init() {
   await loadSavedData();
   loadTheme();
   loadSettings();
+  renderSourceSelector();
   renderLibrary();
 
   // Auto-restore last read

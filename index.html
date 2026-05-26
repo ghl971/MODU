@@ -835,10 +835,21 @@ window.__jszipLoaded = false;
       </button>
     </div>
     <div class="search-overlay-body" style="padding:20px 24px">
-      <textarea id="sourceJsonInput" placeholder='在此粘贴书源 JSON，格式如：\n{\n  "name": "我的书源",\n  "baseUrl": "https://...",\n  ...\n}' style="width:100%;height:200px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-ui);font-size:13px;resize:vertical;outline:none;transition:border var(--transition)"></textarea>
+      <textarea id="sourceJsonInput" placeholder='在此粘贴书源 JSON，格式如：\n{\n  "name": "我的书源",\n  "baseUrl": "https://...",\n  ...\n}' style="width:100%;height:160px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-ui);font-size:13px;resize:vertical;outline:none;transition:border var(--transition)"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+        <input type="url" id="sourceUrlInput" placeholder="或输入书源 JSON 网址..." style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-ui);font-size:13px;outline:none;transition:border var(--transition)">
+        <button class="search-result-btn" id="sourceImportUrlBtn" style="padding:8px 16px;white-space:nowrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          从网址获取
+        </button>
+      </div>
       <div id="sourceImportError" style="color:#EF4444;font-size:13px;margin-top:8px;display:none"></div>
-      <div style="display:flex;gap:8px;margin-top:12px">
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="search-result-btn primary" id="sourceImportBtn" style="padding:8px 24px">导入</button>
+        <button class="search-result-btn" id="sourceImportFileBtn" style="padding:8px 24px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
+          从文件导入
+        </button>
         <button class="search-result-btn" id="sourceImportCancel">取消</button>
       </div>
       <div style="margin-top:16px;padding:12px;background:var(--bg-secondary);border-radius:var(--radius-sm);font-size:12px;color:var(--text-muted);line-height:1.6">
@@ -851,6 +862,9 @@ window.__jszipLoaded = false;
     </div>
   </div>
 </div>
+
+<!-- Hidden file input for importing book sources from JSON file -->
+<input type="file" id="sourceFileInput" accept=".json" style="display:none">
 
 <!-- Manage Sources Overlay -->
 <div class="search-overlay" id="manageSourcesOverlay">
@@ -1073,6 +1087,10 @@ const manageSourcesBtn = $('#manageSourcesBtn');
 const importSourceOverlay = $('#importSourceOverlay');
 const sourceJsonInput = $('#sourceJsonInput');
 const sourceImportBtn = $('#sourceImportBtn');
+const sourceImportFileBtn = $('#sourceImportFileBtn');
+const sourceFileInput = $('#sourceFileInput');
+const sourceUrlInput = $('#sourceUrlInput');
+const sourceImportUrlBtn = $('#sourceImportUrlBtn');
 const sourceImportCancel = $('#sourceImportCancel');
 const sourceImportError = $('#sourceImportError');
 const importSourceClose = $('#importSourceClose');
@@ -1623,6 +1641,7 @@ function renderSourceSelector() {
 function openImportSource() {
   importSourceOverlay.classList.add('visible');
   sourceJsonInput.value = '';
+  sourceUrlInput.value = '';
   sourceImportError.style.display = 'none';
   sourceJsonInput.focus();
 }
@@ -1660,7 +1679,35 @@ function renderSourceManager() {
 
 function importBookSource(jsonStr) {
   try {
-    const src = JSON.parse(jsonStr);
+    let data = JSON.parse(jsonStr);
+    // Handle array — batch import
+    if (Array.isArray(data)) {
+      let count = 0;
+      for (const item of data) {
+        if (!item.name || !item.baseUrl || !item.searchUrl || !item.searchList) continue;
+        if (!item.id) item.id = 'src_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + '_' + count;
+        if (!item.chapterList) item.chapterList = 'a';
+        if (!item.chapterUrlSelector) item.chapterUrlSelector = '@href';
+        if (!item.chapterTitleSelector) item.chapterTitleSelector = '@text';
+        if (!item.contentRule) item.contentRule = 'body';
+        if (!item.contentRemove) item.contentRemove = 'script, style, nav';
+        const exists = state.bookSources.some(s => s.name === item.name || s.id === item.id);
+        if (exists) {
+          const idx = state.bookSources.findIndex(s => s.id === item.id || s.name === item.name);
+          state.bookSources[idx] = item;
+        } else {
+          state.bookSources.push(item);
+        }
+        count++;
+      }
+      if (count === 0) throw new Error('批量导入未发现有效书源');
+      state.activeSourceId = data[0].id;
+      saveAll();
+      renderSourceSelector();
+      showToast(`批量导入完成：成功 ${count} 个书源`, 'success');
+      return true;
+    }
+    const src = data;
     // Validate required fields
     if (!src.name || !src.baseUrl || !src.searchUrl || !src.searchList) {
       throw new Error('缺少必填字段：name, baseUrl, searchUrl, searchList');
@@ -1727,6 +1774,44 @@ sourceImportBtn.addEventListener('click', () => {
     sourceImportError.textContent = e.message;
     sourceImportError.style.display = 'block';
   }
+});
+sourceImportFileBtn.addEventListener('click', () => sourceFileInput.click());
+sourceFileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      importBookSource(ev.target.result);
+      importSourceOverlay.classList.remove('visible');
+    } catch (err) {
+      sourceImportError.textContent = err.message;
+      sourceImportError.style.display = 'block';
+    }
+  };
+  reader.readAsText(file);
+  sourceFileInput.value = '';
+});
+sourceImportUrlBtn.addEventListener('click', async () => {
+  const url = sourceUrlInput.value.trim();
+  if (!url) { sourceImportError.textContent = '请输入书源 JSON 网址'; sourceImportError.style.display = 'block'; return; }
+  sourceImportUrlBtn.disabled = true;
+  sourceImportUrlBtn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin:0;display:inline-block;vertical-align:middle"></span> 获取中…';
+  try {
+    const text = await tryFetch(url, 10000);
+    if (!text) throw new Error('无法访问该网址，请检查地址或网络');
+    // Validate it's parseable JSON
+    JSON.parse(text);
+    sourceJsonInput.value = text;
+    sourceImportError.style.display = 'none';
+    sourceJsonInput.scrollIntoView({ behavior: 'smooth' });
+    showToast('已从网络获取书源，点击「导入」确认', 'info');
+  } catch (e) {
+    sourceImportError.textContent = '获取失败：' + e.message;
+    sourceImportError.style.display = 'block';
+  }
+  sourceImportUrlBtn.disabled = false;
+  sourceImportUrlBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> 从网址获取';
 });
 sourceImportCancel.addEventListener('click', () => importSourceOverlay.classList.remove('visible'));
 importSourceClose.addEventListener('click', () => importSourceOverlay.classList.remove('visible'));
